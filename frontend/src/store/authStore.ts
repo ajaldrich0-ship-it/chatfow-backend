@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import api from "../api/client";
 
-interface User { id: string; email: string; full_name: string }
-interface Workspace { id: string; name: string; slug: string; plan: string; whatsapp_provider?: string; whatsapp_phone_number_id?: string }
+interface User { id: string; email: string; full_name: string; is_superadmin: boolean }
+interface Workspace { id: string; name: string; slug: string; plan: string; whatsapp_provider?: string; whatsapp_phone_number_id?: string; twilio_whatsapp_number?: string }
 
 interface AuthState {
   user: User | null;
@@ -25,6 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem("workspace", JSON.stringify(data.workspace));
     localStorage.setItem("user", JSON.stringify(data.user));
     set({ token: data.access_token, user: data.user, workspace: data.workspace });
+    return data;
   },
 
   register: async (body) => {

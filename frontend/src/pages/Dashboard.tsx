@@ -3,7 +3,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { MessageSquare, Users, Zap, TrendingUp, ArrowUpRight } from "lucide-react";
+import { MessageSquare, Users, Zap, TrendingUp, ArrowUpRight, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { getAnalyticsOverview } from "../api";
 
@@ -70,6 +71,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function Dashboard() {
   const { user, workspace } = useAuthStore();
+  const navigate = useNavigate();
   const [overview, setOverview] = useState<Overview | null>(null);
 
   useEffect(() => {
@@ -92,8 +94,19 @@ export default function Dashboard() {
             <span className="capitalize text-green-600 font-medium">{workspace?.plan}</span> plan
           </p>
         </div>
-        <div className="text-xs text-gray-400 bg-white border border-gray-100 rounded-xl px-3 py-1.5 shadow-sm">
-          {new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+        <div className="flex items-center gap-3">
+          {(user as any)?.is_superadmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all"
+            >
+              <Shield size={16} />
+              Admin Panel
+            </button>
+          )}
+          <div className="text-xs text-gray-400 bg-white border border-gray-100 rounded-xl px-3 py-1.5 shadow-sm">
+            {new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+          </div>
         </div>
       </div>
 

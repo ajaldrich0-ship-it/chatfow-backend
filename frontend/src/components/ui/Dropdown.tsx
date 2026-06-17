@@ -1,1 +1,80 @@
-import { ReactNode, useEffect, useRef, useState } from \"react\";\nimport { ChevronDown } from \"lucide-react\";\n\ninterface DropdownProps {\n  trigger: ReactNode;\n  children: ReactNode;\n  align?: \"left\" | \"right\";\n}\n\nexport default function Dropdown({ trigger, children, align = \"left\" }: DropdownProps) {\n  const [isOpen, setIsOpen] = useState(false);\n  const dropdownRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    const handleClickOutside = (event: MouseEvent) => {\n      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {\n        setIsOpen(false);\n      }\n    };\n\n    document.addEventListener(\"mousedown\", handleClickOutside);\n    return () => document.removeEventListener(\"mousedown\", handleClickOutside);\n  }, []);\n\n  return (\n    <div className=\"relative inline-block\" ref={dropdownRef}>\n      <div onClick={() => setIsOpen(!isOpen)} className=\"cursor-pointer\">\n        {trigger}\n      </div>\n\n      {isOpen && (\n        <div\n          className={`absolute z-50 mt-2 min-w-[200px] bg-white rounded-xl border border-gray-200 shadow-xl py-1 animate-scale-in ${\n            align === \"right\" ? \"right-0\" : \"left-0\"\n          }`}\n        >\n          {children}\n        </div>\n      )}\n    </div>\n  );\n}\n\n// Dropdown Item\ninterface DropdownItemProps {\n  icon?: ReactNode;\n  label: string;\n  onClick?: () => void;\n  danger?: boolean;\n  disabled?: boolean;\n}\n\nexport function DropdownItem({ icon, label, onClick, danger, disabled }: DropdownItemProps) {\n  return (\n    <button\n      onClick={onClick}\n      disabled={disabled}\n      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${\n        danger\n          ? \"text-red-600 hover:bg-red-50\"\n          : disabled\n          ? \"text-gray-400 cursor-not-allowed\"\n          : \"text-gray-700 hover:bg-gray-50\"\n      }`}\n    >\n      {icon && <span className=\"flex-shrink-0\">{icon}</span>}\n      <span className=\"flex-1 text-left\">{label}</span>\n    </button>\n  );\n}\n\n// Dropdown Divider\nexport function DropdownDivider() {\n  return <div className=\"my-1 border-t border-gray-100\" />;\n}\n\n// Dropdown Header\nexport function DropdownHeader({ label }: { label: string }) {\n  return <div className=\"px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider\">{label}</div>;\n}\n
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+
+interface DropdownProps {
+  trigger: ReactNode;
+  children: ReactNode;
+  align?: "left" | "right";
+}
+
+export default function Dropdown({ trigger, children, align = "left" }: DropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block" ref={dropdownRef}>
+      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
+        {trigger}
+      </div>
+
+      {isOpen && (
+        <div
+          className={`absolute z-50 mt-2 min-w-[200px] bg-white rounded-xl border border-gray-200 shadow-xl py-1 animate-scale-in ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dropdown Item
+interface DropdownItemProps {
+  icon?: ReactNode;
+  label: string;
+  onClick?: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+}
+
+export function DropdownItem({ icon, label, onClick, danger, disabled }: DropdownItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+        danger
+          ? "text-red-600 hover:bg-red-50"
+          : disabled
+          ? "text-gray-400 cursor-not-allowed"
+          : "text-gray-700 hover:bg-gray-50"
+      }`}
+    >
+      {icon && <span className="flex-shrink-0">{icon}</span>}
+      <span className="flex-1 text-left">{label}</span>
+    </button>
+  );
+}
+
+// Dropdown Divider
+export function DropdownDivider() {
+  return <div className="my-1 border-t border-gray-100" />;
+}
+
+// Dropdown Header
+export function DropdownHeader({ label }: { label: string }) {
+  return <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</div>;
+}

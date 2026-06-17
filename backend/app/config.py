@@ -1,4 +1,6 @@
-from pydantic_settings import BaseSettings
+import os
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -31,8 +33,15 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "noreply@flowwa.app"
     SMTP_TLS: bool = True
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=(
+            os.path.join(os.getcwd(), ".env"),
+            os.path.join(Path(__file__).resolve().parent.parent.parent, ".env"),
+        ),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()
+

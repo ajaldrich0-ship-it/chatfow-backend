@@ -55,6 +55,7 @@ async def update_whatsapp(workspace_id: uuid.UUID, body: WhatsAppCredentials, us
     workspace.whatsapp_phone_number_id = body.phone_number_id
     workspace.whatsapp_access_token = body.access_token
     workspace.whatsapp_business_account_id = body.business_account_id
+    workspace.whatsapp_provider = "meta"
     await db.commit()
     await db.refresh(workspace)
     return workspace

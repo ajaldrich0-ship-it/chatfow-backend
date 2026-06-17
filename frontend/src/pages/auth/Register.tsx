@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Zap, User, Mail, Lock, Building2 } from "lucide-react";
+import api from "../../api/client";
 
 const FIELDS = [
   { key: "full_name",       label: "Full Name",       type: "text",     icon: User,      placeholder: "John Doe" },
@@ -14,8 +15,16 @@ export default function Register() {
   const [form, setForm] = useState({ full_name: "", email: "", password: "", workspace_name: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const { register } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const provider = localStorage.getItem("pending_gateway_provider");
+    if (provider) {
+      setPendingProvider(provider);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +32,36 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
+
+      // Auto-link pending credentials if any
+      const provider = localStorage.getItem("pending_gateway_provider");
+      const activeWorkspace = useAuthStore.getState().workspace;
+      if (provider && activeWorkspace) {
+        try {
+          if (provider === "meta") {
+            const creds = JSON.parse(localStorage.getItem("pending_whatsapp_creds") || "{}");
+            if (creds.phone_number_id) {
+              await api.put(`/workspaces/${activeWorkspace.id}/whatsapp`, creds);
+              const updated = { ...activeWorkspace, whatsapp_provider: "meta", whatsapp_phone_number_id: creds.phone_number_id };
+              useAuthStore.getState().setWorkspace(updated);
+              localStorage.setItem("workspace", JSON.stringify(updated));
+            }
+          } else if (provider === "twilio") {
+            const creds = JSON.parse(localStorage.getItem("pending_twilio_creds") || "{}");
+            if (creds.account_sid) {
+              const updated = await api.put(`/workspaces/${activeWorkspace.id}/twilio`, creds).then(r => r.data);
+              useAuthStore.getState().setWorkspace({ ...activeWorkspace, ...updated });
+              localStorage.setItem("workspace", JSON.stringify({ ...activeWorkspace, ...updated }));
+            }
+          }
+        } catch (linkErr) {
+          console.error("Failed to auto-link gateway:", linkErr);
+        }
+        localStorage.removeItem("pending_gateway_provider");
+        localStorage.removeItem("pending_whatsapp_creds");
+        localStorage.removeItem("pending_twilio_creds");
+      }
+
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.detail ?? "Registration failed");
@@ -50,6 +89,15 @@ export default function Register() {
 
         {/* Card */}
         <div className="bg-gray-900/80 backdrop-blur-sm border border-gray-800 rounded-2xl p-6 shadow-2xl">
+          {pendingProvider && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mb-4 text-left animate-fade-in">
+              <p className="text-xs font-bold text-emerald-400">⚡ Setup Sync Available</p>
+              <p className="text-[10px] text-gray-405 mt-0.5 leading-relaxed">
+                We detected the {pendingProvider === "meta" ? "Meta WhatsApp" : "Twilio Sandbox"} credentials you configured on the homepage. They will automatically link to your new workspace.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map(({ key, label, type, icon: Icon, placeholder }) => (
               <div key={key}>

@@ -44,25 +44,25 @@ export default function Modal({
 
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-2xl shadow-2xl w-full ${width} max-h-[90vh] flex flex-col animate-scale-in`}
+        className={`relative bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-gray-800/80 rounded-2xl shadow-2xl w-full ${width} max-h-[90vh] flex flex-col animate-scale-in`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-250 dark:border-gray-800/80">
+          <h2 className="text-lg font-bold text-gray-950 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg p-1.5 transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto p-6 flex-1">{children}</div>
+        <div className="overflow-y-auto p-6 flex-1 text-gray-700 dark:text-gray-300">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-800/80 bg-gray-50/50 dark:bg-gray-900/60 rounded-b-2xl">
             {footer}
           </div>
         )}
@@ -70,3 +70,4 @@ export default function Modal({
     </div>
   );
 }
+

@@ -13,36 +13,155 @@ import {
 } from "../api/admin";
 import { useThemeStore } from "../store/themeStore";
 
+// Import UI Library components
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Modal from "../components/ui/Modal";
+
 const PLANS = ["free", "starter", "pro", "enterprise"];
-const PLAN_COLOR: Record<string, string> = {
-  free: "bg-gray-100 text-gray-600",
-  starter: "bg-blue-100 text-blue-700",
-  pro: "bg-violet-100 text-violet-700",
-  enterprise: "bg-amber-100 text-amber-700",
-};
-const STATUS_COLOR: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-600",
-  past_due: "bg-orange-100 text-orange-600",
-  halted: "bg-red-100 text-red-600",
-  none: "bg-gray-100 text-gray-500",
+
+// Mappings for UI badge colors
+const PLAN_COLOR_MAP: Record<string, "gray" | "blue" | "purple" | "orange"> = {
+  free: "gray",
+  starter: "blue",
+  pro: "purple",
+  enterprise: "orange",
 };
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: any; icon: any; color: string }) {
+const STATUS_COLOR_MAP: Record<string, "green" | "red" | "orange" | "gray"> = {
+  active: "green",
+  cancelled: "red",
+  past_due: "orange",
+  halted: "red",
+  none: "gray",
+};
+
+// Colors mapping for native Tailwind compilation (avoiding dynamic compilation JIT omissions)
+const CARD_THEMES: Record<string, { bgIcon: string; textIcon: string; borderIcon: string; hoverBorder: string; glowBg: string }> = {
+  blue: {
+    bgIcon: "bg-blue-500/10 dark:bg-blue-500/20",
+    textIcon: "text-blue-600 dark:text-blue-400",
+    borderIcon: "border-blue-500/20 dark:border-blue-500/30",
+    hoverBorder: "hover:border-blue-500/30 dark:hover:border-blue-500/40 hover:shadow-blue-500/5",
+    glowBg: "bg-blue-500/10 dark:bg-blue-500/5",
+  },
+  violet: {
+    bgIcon: "bg-violet-500/10 dark:bg-violet-500/20",
+    textIcon: "text-violet-600 dark:text-violet-400",
+    borderIcon: "border-violet-500/20 dark:border-violet-500/30",
+    hoverBorder: "hover:border-violet-500/30 dark:hover:border-violet-500/40 hover:shadow-violet-500/5",
+    glowBg: "bg-violet-500/10 dark:bg-violet-500/5",
+  },
+  green: {
+    bgIcon: "bg-green-500/10 dark:bg-green-500/20",
+    textIcon: "text-green-600 dark:text-green-400",
+    borderIcon: "border-green-500/20 dark:border-green-500/30",
+    hoverBorder: "hover:border-green-500/30 dark:hover:border-green-500/40 hover:shadow-green-500/5",
+    glowBg: "bg-green-500/10 dark:bg-green-500/5",
+  },
+  amber: {
+    bgIcon: "bg-amber-500/10 dark:bg-amber-500/20",
+    textIcon: "text-amber-600 dark:text-amber-400",
+    borderIcon: "border-amber-500/20 dark:border-amber-500/30",
+    hoverBorder: "hover:border-amber-500/30 dark:hover:border-amber-500/40 hover:shadow-amber-500/5",
+    glowBg: "bg-amber-500/10 dark:bg-amber-500/5",
+  },
+};
+
+const PLAN_THEMES: Record<string, {
+  cardBg: string;
+  glow: string;
+  iconBg: string;
+  textIcon: string;
+  borderClass: string;
+  accentBar: string;
+  badgeBg: string;
+  badgeText: string;
+}> = {
+  free: {
+    cardBg: "bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-gray-900 dark:to-gray-950/40",
+    glow: "bg-slate-400/10 dark:bg-slate-400/5",
+    iconBg: "bg-slate-200/60 dark:bg-slate-800/60",
+    textIcon: "text-slate-600 dark:text-slate-400",
+    borderClass: "border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700/60 hover:shadow-slate-500/5",
+    accentBar: "bg-slate-400 dark:bg-slate-600",
+    badgeBg: "bg-slate-100 dark:bg-slate-800",
+    badgeText: "text-slate-600 dark:text-slate-400",
+  },
+  starter: {
+    cardBg: "bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-gray-900 dark:to-blue-950/10",
+    glow: "bg-blue-400/10 dark:bg-blue-400/5",
+    iconBg: "bg-blue-100/60 dark:bg-blue-900/40",
+    textIcon: "text-blue-600 dark:text-blue-400",
+    borderClass: "border-blue-200 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-800/40 hover:shadow-blue-500/5",
+    accentBar: "bg-blue-500",
+    badgeBg: "bg-blue-50 dark:bg-blue-950/40",
+    badgeText: "text-blue-600 dark:text-blue-400",
+  },
+  pro: {
+    cardBg: "bg-gradient-to-br from-violet-50 to-purple-50/50 dark:from-gray-900 dark:to-violet-950/10",
+    glow: "bg-violet-400/10 dark:bg-violet-400/5",
+    iconBg: "bg-violet-100/60 dark:bg-violet-900/40",
+    textIcon: "text-violet-600 dark:text-violet-400",
+    borderClass: "border-violet-200 dark:border-violet-900/30 hover:border-violet-300 dark:hover:border-violet-800/40 hover:shadow-violet-500/5",
+    accentBar: "bg-violet-500",
+    badgeBg: "bg-violet-50 dark:bg-violet-950/40",
+    badgeText: "text-violet-600 dark:text-violet-400",
+  },
+  enterprise: {
+    cardBg: "bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-gray-900 dark:to-amber-950/10",
+    glow: "bg-amber-400/10 dark:bg-amber-400/5",
+    iconBg: "bg-amber-100/60 dark:bg-amber-900/40",
+    textIcon: "text-amber-600 dark:text-amber-400",
+    borderClass: "border-amber-200 dark:border-amber-900/30 hover:border-amber-300 dark:hover:border-amber-800/40 hover:shadow-amber-500/5",
+    accentBar: "bg-amber-500",
+    badgeBg: "bg-amber-50 dark:bg-amber-950/40",
+    badgeText: "text-amber-600 dark:text-amber-400",
+  },
+};
+
+const PLAN_ICONS: Record<string, any> = {
+  free: Building2,
+  starter: Zap,
+  pro: TrendingUp,
+  enterprise: Shield,
+};
+
+const QUICK_THEMES: Record<string, { border: string; text: string; bg: string }> = {
+  active: {
+    border: "border-green-500/20 hover:border-green-500/30 hover:shadow-green-500/5",
+    text: "text-green-600 dark:text-green-400",
+    bg: "bg-green-500/5 dark:bg-green-500/10",
+  },
+  contacts: {
+    border: "border-blue-500/20 hover:border-blue-500/30 hover:shadow-blue-500/5",
+    text: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-500/5 dark:bg-blue-500/10",
+  },
+  flows: {
+    border: "border-violet-500/20 hover:border-violet-500/30 hover:shadow-violet-500/5",
+    text: "text-violet-600 dark:text-violet-400",
+    bg: "bg-violet-500/5 dark:bg-violet-500/10",
+  },
+};
+
+function StatCard({ label, value, icon: Icon, themeKey }: { label: string; value: any; icon: any; themeKey: "blue" | "violet" | "green" | "amber" }) {
+  const theme = CARD_THEMES[themeKey];
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-        <Icon size={18} />
+    <div className={`relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-250/60 dark:border-gray-800/40 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${theme.hoverBorder} group`}>
+      {/* Background soft glow */}
+      <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full ${theme.glowBg} blur-2xl group-hover:scale-125 transition-transform duration-500`} />
+      
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${theme.bgIcon} ${theme.textIcon} border ${theme.borderIcon} group-hover:scale-105 transition-transform duration-300`}>
+        <Icon size={18} className="transition-transform duration-300 group-hover:rotate-6" />
       </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
+      <p className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">{value}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">{label}</p>
     </div>
   );
 }
 
-function Badge({ label, className }: { label: string; className: string }) {
-  return <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${className}`}>{label}</span>;
-}
 
 export default function AdminDashboard() {
   const { theme, toggleTheme } = useThemeStore();
@@ -167,44 +286,58 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
       {/* Top bar */}
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-8 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-40 border-b border-gray-200/80 dark:border-gray-800/80 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md px-8 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-            <Zap size={15} className="text-white" fill="white" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-emerald-600 flex items-center justify-center shadow-md shadow-brand-500/10 hover:scale-105 transition-transform">
+            <Zap size={16} className="text-white animate-pulse" fill="white" />
           </div>
           <div>
-            <span className="font-bold text-gray-900 dark:text-white">FlowWA</span>
-            <span className="ml-2 text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
+            <span className="font-extrabold text-gray-950 dark:text-white text-lg tracking-tight">FlowWA</span>
+            <span className="ml-2.5 text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
               Super Admin
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100/80 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200/20 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 shadow-sm"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <a href="/dashboard" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <a
+            href="/dashboard"
+            className="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100/50 dark:bg-gray-900/50 border border-gray-200/50 dark:border-gray-800/50 px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+          >
             ← Back to App
           </a>
         </div>
       </div>
 
-      <div className="px-8 py-6 max-w-7xl mx-auto">
+      <div className="px-8 py-8 max-w-7xl mx-auto">
+        {/* Banner Section */}
+        <div className="relative overflow-hidden mb-8 rounded-3xl bg-gradient-to-br from-brand-600/10 via-emerald-600/5 to-transparent dark:from-brand-950/20 dark:via-emerald-950/10 dark:to-transparent border border-brand-500/10 p-8 shadow-sm">
+          <div className="absolute right-0 top-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-brand-500/10 dark:bg-brand-500/5 blur-3xl" />
+          <h1 className="text-3xl font-extrabold text-gray-950 dark:text-white tracking-tight">Super Admin Dashboard</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 font-medium max-w-xl">
+            System administration center. Manage your platforms workspaces, user lists, verify active WhatsApp nodes, view MRR trends and manage payments.
+          </p>
+        </div>
+
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 rounded-xl p-1 w-fit mb-6 border border-gray-200 dark:border-gray-800">
+        <div className="flex gap-1 bg-gray-200/50 dark:bg-gray-900/50 backdrop-blur-md rounded-xl p-1.5 w-fit mb-8 border border-gray-300/30 dark:border-gray-800/40 shadow-inner">
           {(["overview", "workspaces", "users"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${
-                tab === t ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow" : "text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+              className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition-all duration-300 ${
+                tab === t
+                  ? "bg-white dark:bg-gray-800 text-brand-600 dark:text-white shadow-md shadow-gray-200/40 dark:shadow-black/20 scale-102"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/40 dark:hover:bg-gray-800/20"
               }`}
             >
               {t}
@@ -214,41 +347,54 @@ export default function AdminDashboard() {
 
         {/* ── OVERVIEW ── */}
         {tab === "overview" && stats && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Total Workspaces"   value={stats.total_workspaces}     icon={Building2}     color="bg-blue-500/10 text-blue-400" />
-              <StatCard label="Total Users"         value={stats.total_users}          icon={Users}         color="bg-violet-500/10 text-violet-400" />
-              <StatCard label="Messages Sent"       value={stats.total_messages_sent}  icon={MessageSquare} color="bg-green-500/10 text-green-400" />
-              <StatCard label="MRR (₹)"             value={`₹${stats.mrr_inr?.toLocaleString("en-IN")}`} icon={IndianRupee} color="bg-amber-500/10 text-amber-400" />
+          <div className="space-y-8 animate-fade-in">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+              <StatCard label="Total Workspaces" value={stats.total_workspaces} icon={Building2} themeKey="blue" />
+              <StatCard label="Total Users" value={stats.total_users} icon={Users} themeKey="violet" />
+              <StatCard label="Messages Sent" value={stats.total_messages_sent?.toLocaleString() ?? 0} icon={MessageSquare} themeKey="green" />
+              <StatCard label="MRR (₹)" value={`₹${stats.mrr_inr?.toLocaleString("en-IN")}`} icon={IndianRupee} themeKey="amber" />
             </div>
 
             {/* Revenue Chart */}
             {revenue.length > 0 && (
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 size={16} className="text-amber-500 dark:text-amber-400" />
-                  <p className="font-semibold text-gray-900 dark:text-white">Revenue Trend (MRR)</p>
+              <div className="bg-white/70 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-200/60 dark:border-gray-800/40 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 size={16} className="text-brand-500 dark:text-brand-400" />
+                    <p className="font-bold text-gray-950 dark:text-white">Revenue Trend (MRR)</p>
+                  </div>
+                  <span className="text-[10px] bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Monthly
+                  </span>
                 </div>
-                <div className="flex items-end justify-between gap-2 h-48">
+                <div className="relative flex items-end justify-between gap-2 h-48">
+                  {/* Grid Lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                    <div className="border-t border-gray-100 dark:border-gray-800/50 w-full" />
+                    <div className="border-t border-gray-100 dark:border-gray-800/50 w-full" />
+                    <div className="border-t border-gray-100 dark:border-gray-800/50 w-full" />
+                    <div className="border-t border-gray-100 dark:border-gray-800/50 w-full" />
+                  </div>
+
                   {revenue.map((item, i) => {
                     const maxMrr = Math.max(...revenue.map(r => r.mrr));
                     const height = maxMrr > 0 ? (item.mrr / maxMrr) * 100 : 0;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                        <div className="relative w-full group">
+                      <div key={i} className="z-10 flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                        <div className="relative w-full group/bar flex flex-col items-center justify-end h-full">
                           <div
-                            className="w-full bg-gradient-to-t from-amber-500 to-amber-400 rounded-t-lg transition-all duration-300 hover:from-amber-400 hover:to-amber-300"
+                            className="w-full max-w-[32px] bg-gradient-to-t from-brand-600 to-brand-400 dark:from-brand-600 dark:to-brand-50 rounded-t-lg transition-all duration-300 hover:from-brand-500 hover:to-brand-300 shadow-lg shadow-brand-500/10 hover:shadow-brand-500/20 cursor-pointer"
                             style={{ height: `${height}%`, minHeight: item.mrr > 0 ? '8px' : '0' }}
                           />
                           {/* Tooltip */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="bg-gray-800 dark:bg-gray-700 border border-gray-700 dark:border-gray-600 rounded-lg px-3 py-2 text-xs text-white whitespace-nowrap shadow-xl">
-                              <p className="font-semibold">₹{item.mrr.toLocaleString("en-IN")}</p>
-                              <p className="text-gray-400 dark:text-gray-300 text-[10px]">{item.month}</p>
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                            <div className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border border-gray-250/60 dark:border-gray-800/80 rounded-xl px-3.5 py-2 text-xs text-gray-900 dark:text-white whitespace-nowrap shadow-xl">
+                              <p className="font-extrabold text-gray-950 dark:text-white">₹{item.mrr.toLocaleString("en-IN")}</p>
+                              <p className="text-gray-400 dark:text-gray-500 text-[10px] mt-0.5 font-semibold">{item.month}</p>
                             </div>
                           </div>
                         </div>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">{item.month.split(' ')[0]}</p>
+                        <p className="text-[10px] text-gray-450 dark:text-gray-400 text-center font-bold">{item.month.split(' ')[0]}</p>
                       </div>
                     );
                   })}
@@ -257,135 +403,194 @@ export default function AdminDashboard() {
             )}
 
             {/* Plan breakdown */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-              <p className="font-semibold text-gray-900 dark:text-white mb-4">Plan Breakdown</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {PLANS.map((plan) => (
-                  <div key={plan} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.plan_breakdown?.[plan] ?? 0}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1">{plan}</p>
-                  </div>
-                ))}
+            <div className="bg-white/70 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-200/60 dark:border-gray-800/40 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+              <p className="font-bold text-gray-950 dark:text-white mb-6">Workspace Subscription Breakdown</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                {PLANS.map((plan) => {
+                  const theme = PLAN_THEMES[plan];
+                  const Icon = PLAN_ICONS[plan];
+                  const count = stats.plan_breakdown?.[plan] ?? 0;
+                  return (
+                    <div key={plan} className={`relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg ${theme.cardBg} ${theme.borderClass} group`}>
+                      {/* Subtly glowing backplane */}
+                      <div className={`absolute -right-4 -bottom-4 w-16 h-16 rounded-full ${theme.glow} blur-xl group-hover:scale-125 transition-transform duration-500`} />
+                      
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${theme.iconBg} ${theme.textIcon} border border-black/5 dark:border-white/5`}>
+                          <Icon size={16} />
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${theme.badgeBg} ${theme.badgeText}`}>
+                          {plan}
+                        </span>
+                      </div>
+                      
+                      <p className="text-3xl font-extrabold text-gray-950 dark:text-white tracking-tight">{count}</p>
+                      
+                      {/* Visual progress scale bar */}
+                      <div className="h-1 bg-gray-200/50 dark:bg-gray-800/60 rounded-full mt-4 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${theme.accentBar}`}
+                          style={{ width: `${Math.min(100, count > 0 ? (count / (stats.total_workspaces || 1)) * 100 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Quick stats */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Active Workspaces</p>
-                <p className="text-2xl font-bold text-green-500 dark:text-green-400 mt-1">{stats.active_workspaces}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Contacts</p>
-                <p className="text-2xl font-bold text-blue-500 dark:text-blue-400 mt-1">{stats.total_contacts}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Flows</p>
-                <p className="text-2xl font-bold text-violet-500 dark:text-violet-400 mt-1">{stats.total_flows}</p>
-              </div>
+              {[
+                { label: "Active Workspaces", value: stats.active_workspaces, themeKey: "active" },
+                { label: "Total Contacts", value: stats.total_contacts?.toLocaleString() ?? 0, themeKey: "contacts" },
+                { label: "Total Flows", value: stats.total_flows?.toLocaleString() ?? 0, themeKey: "flows" },
+              ].map((qs, i) => {
+                const theme = QUICK_THEMES[qs.themeKey];
+                return (
+                  <div key={i} className={`relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-md rounded-2xl border border-gray-200/60 dark:border-gray-800/40 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${theme.border}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{qs.label}</p>
+                        <p className={`text-2xl font-extrabold mt-1.5 ${theme.text}`}>{qs.value}</p>
+                      </div>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${theme.bg}`}>
+                        <span className={`w-2 h-2 rounded-full ${qs.themeKey === "active" ? "bg-green-500 animate-pulse" : qs.themeKey === "contacts" ? "bg-blue-500" : "bg-violet-500"}`} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* ── WORKSPACES ── */}
         {tab === "workspaces" && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 w-72">
-                <Search size={13} className="text-gray-400 dark:text-gray-500" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search workspace or email..."
-                  className="bg-transparent text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 outline-none w-full"
-                />
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full max-w-md">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
+                    <Search size={16} />
+                  </div>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search workspace name, slug, email..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/70 dark:bg-gray-900/60 border border-gray-250/60 dark:border-gray-800/50 rounded-xl text-sm text-gray-950 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all shadow-sm"
+                  />
+                </div>
+                <button
+                  onClick={loadWorkspaces}
+                  disabled={loading}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50 active:scale-95 transition-all shadow-sm"
+                  title="Refresh List"
+                >
+                  <RefreshCw size={15} className={`${loading ? "animate-spin text-brand-500" : ""}`} />
+                </button>
               </div>
-              <button onClick={loadWorkspaces} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                <RefreshCw size={15} />
-              </button>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="bg-white/70 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl border border-gray-250/60 dark:border-gray-800/50 overflow-hidden shadow-sm">
               <table className="w-full text-sm">
-                <thead className="border-b border-gray-200 dark:border-gray-800">
-                  <tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-                    <th className="px-5 py-3 font-medium">Workspace</th>
-                    <th className="px-5 py-3 font-medium">Owner</th>
-                    <th className="px-5 py-3 font-medium">Plan</th>
-                    <th className="px-5 py-3 font-medium">Subscription</th>
-                    <th className="px-5 py-3 font-medium">Messages</th>
-                    <th className="px-5 py-3 font-medium">Contacts</th>
-                    <th className="px-5 py-3 font-medium">WA</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">Actions</th>
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800/50">
+                    <th className="px-6 py-4 font-bold">Workspace</th>
+                    <th className="px-6 py-4 font-bold">Owner</th>
+                    <th className="px-6 py-4 font-bold">Plan</th>
+                    <th className="px-6 py-4 font-bold">Subscription</th>
+                    <th className="px-6 py-4 font-bold text-center">Messages</th>
+                    <th className="px-6 py-4 text-center font-bold">Contacts</th>
+                    <th className="px-6 py-4 text-center font-bold">WhatsApp</th>
+                    <th className="px-6 py-4 font-bold">Status</th>
+                    <th className="px-6 py-4 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800/60">
                   {loading ? (
-                    <tr><td colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">Loading...</td></tr>
+                    <tr>
+                      <td colSpan={9} className="text-center py-14 text-gray-500 dark:text-gray-400 font-semibold">
+                        <RefreshCw size={24} className="animate-spin text-brand-500 mx-auto mb-3" />
+                        Loading workspaces...
+                      </td>
+                    </tr>
                   ) : workspaces.length === 0 ? (
-                    <tr><td colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">No workspaces found</td></tr>
+                    <tr>
+                      <td colSpan={9} className="text-center py-14 text-gray-400 dark:text-gray-500 font-medium">
+                        No workspaces found
+                      </td>
+                    </tr>
                   ) : workspaces.map((ws) => (
-                    <tr key={ws.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={ws.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                      <td className="px-6 py-4.5">
                         <button
                           onClick={() => loadWorkspaceDetail(ws.id)}
-                          className="text-left hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                          className="text-left hover:text-brand-500 dark:hover:text-brand-400 transition-colors focus:outline-none group"
                         >
-                          <p className="font-medium text-gray-900 dark:text-white">{ws.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{ws.slug}</p>
+                          <p className="font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{ws.name}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-550 mt-0.5">{ws.slug}</p>
                         </button>
                       </td>
-                      <td className="px-5 py-3">
-                        <p className="text-gray-700 dark:text-gray-300">{ws.owner_name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{ws.owner_email}</p>
+                      <td className="px-6 py-4.5">
+                        <p className="text-gray-800 dark:text-gray-300 font-bold">{ws.owner_name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ws.owner_email}</p>
                       </td>
-                      <td className="px-5 py-3">
-                        <Badge label={ws.plan} className={PLAN_COLOR[ws.plan] ?? "bg-gray-100 text-gray-600"} />
+                      <td className="px-6 py-4.5">
+                        <Badge label={ws.plan} color={PLAN_COLOR_MAP[ws.plan] ?? "gray"} variant="soft" />
                       </td>
-                      <td className="px-5 py-3">
-                        <Badge label={ws.subscription_status} className={STATUS_COLOR[ws.subscription_status] ?? "bg-gray-100 text-gray-500"} />
+                      <td className="px-6 py-4.5">
+                        <Badge label={ws.subscription_status} color={STATUS_COLOR_MAP[ws.subscription_status] ?? "gray"} variant="soft" />
                         {ws.subscription_end && (
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-semibold">
                             until {new Date(ws.subscription_end * 1000).toLocaleDateString()}
                           </p>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{ws.messages_sent}</td>
-                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{ws.contacts}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-medium ${ws.whatsapp_connected ? "text-green-500 dark:text-green-400" : "text-gray-400 dark:text-gray-600"}`}>
+                      <td className="px-6 py-4.5 text-center font-bold text-gray-800 dark:text-gray-300">
+                        {ws.messages_sent?.toLocaleString() ?? 0}
+                      </td>
+                      <td className="px-6 py-4.5 text-center font-bold text-gray-800 dark:text-gray-300">
+                        {ws.contacts?.toLocaleString() ?? 0}
+                      </td>
+                      <td className="px-6 py-4.5 text-center">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold ${ws.whatsapp_connected ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600"}`}>
                           {ws.whatsapp_connected ? "✓" : "✗"}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-medium ${ws.is_active ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                      <td className="px-6 py-4.5">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${ws.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${ws.is_active ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                           {ws.is_active ? "Active" : "Suspended"}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="px-6 py-4.5">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => { setPlanModal(ws); setSelectedPlan(ws.plan); }}
-                            className="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-100/60 dark:border-blue-500/20 rounded-lg transition-all"
                           >
                             Plan
                           </button>
                           <button
                             onClick={() => { setExtendModal(ws); setExtendDays(30); }}
-                            className="text-xs text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-bold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 border border-green-100/60 dark:border-green-500/20 rounded-lg transition-all"
                           >
                             Extend
                           </button>
                           <button
                             onClick={() => { setPaymentsModal(ws); loadPayments(ws.id); setShowAddPayment(false); }}
-                            className="text-xs text-purple-500 dark:text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 border border-purple-100/60 dark:border-purple-500/20 rounded-lg transition-all"
                           >
                             Payments
                           </button>
                           <button
                             onClick={() => handleSuspendWs(ws.id, ws.is_active)}
-                            className={`text-xs transition-colors ${ws.is_active ? "text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300" : "text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300"}`}
+                            className={`px-2.5 py-1.5 text-xs font-bold border rounded-lg transition-all ${
+                              ws.is_active
+                                ? "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-100/60 dark:border-red-500/20"
+                                : "text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 border-green-100/60 dark:border-green-500/20"
+                            }`}
                           >
                             {ws.is_active ? "Suspend" : "Activate"}
                           </button>
@@ -401,76 +606,108 @@ export default function AdminDashboard() {
 
         {/* ── USERS ── */}
         {tab === "users" && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 w-72">
-                <Search size={13} className="text-gray-400 dark:text-gray-500" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search users..."
-                  className="bg-transparent text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 outline-none w-full"
-                />
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full max-w-md">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
+                    <Search size={16} />
+                  </div>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search user name, email..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/70 dark:bg-gray-900/60 border border-gray-250/60 dark:border-gray-800/50 rounded-xl text-sm text-gray-950 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all shadow-sm"
+                  />
+                </div>
+                <button
+                  onClick={loadUsers}
+                  disabled={loading}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50 active:scale-95 transition-all shadow-sm"
+                  title="Refresh List"
+                >
+                  <RefreshCw size={15} className={`${loading ? "animate-spin text-brand-500" : ""}`} />
+                </button>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="bg-white/70 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl border border-gray-250/60 dark:border-gray-800/50 overflow-hidden shadow-sm">
               <table className="w-full text-sm">
-                <thead className="border-b border-gray-200 dark:border-gray-800">
-                  <tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-                    <th className="px-5 py-3 font-medium">User</th>
-                    <th className="px-5 py-3 font-medium">Email</th>
-                    <th className="px-5 py-3 font-medium">Joined</th>
-                    <th className="px-5 py-3 font-medium">Role</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">Actions</th>
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider bg-gray-50/50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800/50">
+                    <th className="px-6 py-4 font-bold">User</th>
+                    <th className="px-6 py-4 font-bold">Email</th>
+                    <th className="px-6 py-4 font-bold">Joined</th>
+                    <th className="px-6 py-4 font-bold">Role</th>
+                    <th className="px-6 py-4 font-bold">Status</th>
+                    <th className="px-6 py-4 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800/60">
                   {loading ? (
-                    <tr><td colSpan={6} className="text-center py-10 text-gray-500 dark:text-gray-400">Loading...</td></tr>
+                    <tr>
+                      <td colSpan={6} className="text-center py-14 text-gray-500 dark:text-gray-400 font-semibold">
+                        <RefreshCw size={24} className="animate-spin text-brand-500 mx-auto mb-3" />
+                        Loading users...
+                      </td>
+                    </tr>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-14 text-gray-400 dark:text-gray-500 font-medium">
+                        No users found
+                      </td>
+                    </tr>
                   ) : users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                      <td className="px-6 py-4.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-emerald-600 flex items-center justify-center text-white text-xs font-black shadow-sm select-none">
                             {u.full_name?.[0]?.toUpperCase()}
                           </div>
-                          <span className="font-medium text-gray-900 dark:text-white">{u.full_name}</span>
+                          <span className="font-bold text-gray-900 dark:text-white">{u.full_name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">{u.email}</td>
-                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                      <td className="px-6 py-4.5 text-gray-650 dark:text-gray-400 font-medium">{u.email}</td>
+                      <td className="px-6 py-4.5 text-gray-400 dark:text-gray-500 text-xs font-semibold">
                         {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                       </td>
-                      <td className="px-5 py-3">
-                        {u.is_superadmin
-                          ? <span className="text-xs font-medium text-amber-500 dark:text-amber-400 flex items-center gap-1"><Shield size={11} />Superadmin</span>
-                          : <span className="text-xs text-gray-500 dark:text-gray-400">User</span>
-                        }
+                      <td className="px-6 py-4.5">
+                        {u.is_superadmin ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                            <Shield size={12} className="animate-pulse" />
+                            Superadmin
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-550 font-bold uppercase tracking-wider pl-1.5">User</span>
+                        )}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-medium ${u.is_active ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                      <td className="px-6 py-4.5">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${u.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.is_active ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                           {u.is_active ? "Active" : "Suspended"}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="px-6 py-4.5">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => { setEditUserModal(u); setEditUserForm({ full_name: u.full_name, email: u.email }); }}
-                            className="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-100/60 dark:border-blue-500/20 rounded-lg transition-all"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleSuperadmin(u.id, u.is_superadmin)}
-                            className="text-xs text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-100/60 dark:border-amber-500/20 rounded-lg transition-all"
                           >
                             {u.is_superadmin ? "Revoke" : "Admin"}
                           </button>
                           <button
                             onClick={() => handleSuspendUser(u.id, u.is_active)}
-                            className={`text-xs transition-colors ${u.is_active ? "text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300" : "text-green-500 dark:text-green-400 hover:text-green-600 dark:hover:text-green-300"}`}
+                            className={`px-2.5 py-1.5 text-xs font-bold border rounded-lg transition-all ${
+                              u.is_active
+                                ? "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-100/60 dark:border-red-500/20"
+                                : "text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 border-green-100/60 dark:border-green-500/20"
+                            }`}
                           >
                             {u.is_active ? "Suspend" : "Activate"}
                           </button>
@@ -486,191 +723,207 @@ export default function AdminDashboard() {
       </div>
 
       {/* Plan change modal */}
-      {planModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-semibold text-white">Change Plan</p>
-              <button onClick={() => setPlanModal(null)} className="text-gray-500 hover:text-white"><X size={16} /></button>
+      <Modal
+        open={!!planModal}
+        onClose={() => setPlanModal(null)}
+        title="Change Subscription Plan"
+        width="max-w-sm"
+      >
+        {planModal && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Workspace: <span className="text-gray-900 dark:text-white font-bold">{planModal.name}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {PLANS.map((p) => {
+                const planTheme = PLAN_THEMES[p];
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setSelectedPlan(p)}
+                    className={`py-2.5 rounded-xl text-sm font-semibold capitalize border transition-all ${
+                      selectedPlan === p
+                        ? `${planTheme.accentBar} border-transparent text-white shadow-md shadow-brand-500/10`
+                        : "bg-white dark:bg-gray-800/50 border-gray-250 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-sm text-gray-400 mb-4">Workspace: <span className="text-white font-medium">{planModal.name}</span></p>
-            <div className="grid grid-cols-2 gap-2 mb-5">
-              {PLANS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSelectedPlan(p)}
-                  className={`py-2.5 rounded-xl text-sm font-medium capitalize border transition-all ${
-                    selectedPlan === p
-                      ? "bg-green-600 border-green-500 text-white"
-                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-            <button
+            <Button
               onClick={handleChangePlan}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:from-green-600 hover:to-emerald-700 transition-all"
+              fullWidth
+              variant="primary"
             >
               Apply Plan
-            </button>
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Edit User Modal */}
-      {editUserModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Edit2 size={16} className="text-blue-400" />
-                <p className="font-semibold text-white">Edit User</p>
-              </div>
-              <button onClick={() => setEditUserModal(null)} className="text-gray-500 hover:text-white"><X size={16} /></button>
+      <Modal
+        open={!!editUserModal}
+        onClose={() => setEditUserModal(null)}
+        title="Edit User Info"
+        width="max-w-md"
+      >
+        {editUserModal && (
+          <div className="space-y-4">
+            <Input
+              label="Full Name"
+              value={editUserForm.full_name}
+              onChange={(e) => setEditUserForm({ ...editUserForm, full_name: e.target.value })}
+              placeholder="Enter full name"
+              required
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              value={editUserForm.email}
+              onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+              placeholder="Enter email"
+              required
+            />
+            <div className="pt-2">
+              <Button
+                onClick={handleEditUser}
+                fullWidth
+                variant="primary"
+              >
+                Save Changes
+              </Button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1.5">Full Name</label>
-                <input
-                  value={editUserForm.full_name}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, full_name: e.target.value })}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="Enter full name"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1.5">Email</label>
-                <input
-                  value={editUserForm.email}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="Enter email"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleEditUser}
-              className="w-full mt-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all"
-            >
-              Save Changes
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Extend Validity Modal */}
-      {extendModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-green-400" />
-                <p className="font-semibold text-white">Extend Validity</p>
-              </div>
-              <button onClick={() => setExtendModal(null)} className="text-gray-500 hover:text-white"><X size={16} /></button>
-            </div>
-            <p className="text-sm text-gray-400 mb-1">Workspace: <span className="text-white font-medium">{extendModal.name}</span></p>
-            {extendModal.subscription_end && (
-              <p className="text-xs text-gray-500 mb-4">
-                Current expiry: {new Date(extendModal.subscription_end * 1000).toLocaleDateString()}
+      <Modal
+        open={!!extendModal}
+        onClose={() => setExtendModal(null)}
+        title="Extend Subscription Validity"
+        width="max-w-md"
+      >
+        {extendModal && (
+          <div className="space-y-5">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Workspace: <span className="text-gray-900 dark:text-white font-bold">{extendModal.name}</span>
               </p>
-            )}
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-gray-400 block mb-2">Add Days</label>
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {[7, 15, 30, 90].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setExtendDays(d)}
-                      className={`py-2 rounded-lg text-sm font-medium border transition-all ${
-                        extendDays === d
-                          ? "bg-green-600 border-green-500 text-white"
-                          : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
-                      }`}
-                    >
-                      {d}d
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  value={extendDays}
-                  onChange={(e) => setExtendDays(parseInt(e.target.value) || 0)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-                  placeholder="Custom days"
-                  min="1"
-                />
-              </div>
               {extendModal.subscription_end && (
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                  <p className="text-xs text-gray-400">New expiry date:</p>
-                  <p className="text-sm text-green-400 font-medium mt-1">
-                    {new Date(extendModal.subscription_end * 1000 + extendDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                  </p>
-                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-semibold">
+                  Current expiry: <span className="text-gray-700 dark:text-gray-300">{new Date(extendModal.subscription_end * 1000).toLocaleDateString()}</span>
+                </p>
               )}
             </div>
-            <button
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-gray-400 dark:text-gray-550 uppercase tracking-wider block">Add Days</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[7, 15, 30, 90].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setExtendDays(d)}
+                    className={`py-2 rounded-xl text-sm font-semibold border transition-all ${
+                      extendDays === d
+                        ? "bg-green-600 border-transparent text-white shadow-md shadow-green-600/10"
+                        : "bg-white dark:bg-gray-800/50 border-gray-250 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+              <Input
+                type="number"
+                label="Custom Days"
+                value={extendDays}
+                onChange={(e) => setExtendDays(parseInt(e.target.value) || 0)}
+                placeholder="Custom days"
+                min="1"
+                required
+              />
+            </div>
+
+            {extendModal.subscription_end && (
+              <div className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200/50 dark:border-gray-800/60 rounded-xl p-4">
+                <p className="text-xs text-gray-400 dark:text-gray-550 font-semibold">New expiry date:</p>
+                <p className="text-base text-green-600 dark:text-green-400 font-bold mt-1">
+                  {new Date(extendModal.subscription_end * 1000 + extendDays * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+
+            <Button
               onClick={handleExtendValidity}
-              className="w-full mt-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:from-green-600 hover:to-emerald-700 transition-all"
+              fullWidth
+              variant="success"
             >
               Extend Subscription
-            </button>
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Payments Modal */}
-      {paymentsModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CreditCard size={16} className="text-purple-400" />
-                <p className="font-semibold text-white">Payment Details</p>
-              </div>
-              <button onClick={() => setPaymentsModal(null)} className="text-gray-500 hover:text-white"><X size={16} /></button>
-            </div>
-            <p className="text-sm text-gray-400 mb-4">Workspace: <span className="text-white font-medium">{paymentsModal.name}</span></p>
+      <Modal
+        open={!!paymentsModal}
+        onClose={() => setPaymentsModal(null)}
+        title="Manual Payment Records"
+        width="max-w-xl"
+      >
+        {paymentsModal && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Workspace: <span className="text-gray-900 dark:text-white font-bold">{paymentsModal.name}</span>
+            </p>
 
             {!showAddPayment ? (
               <>
-                <button
+                <Button
                   onClick={() => setShowAddPayment(true)}
-                  className="w-full mb-4 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+                  fullWidth
+                  variant="primary"
+                  className="mb-2"
                 >
                   + Add Manual Payment
-                </button>
+                </Button>
 
                 {payments.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500">
-                    <CreditCard size={32} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No payment records found</p>
+                  <div className="text-center py-10 text-gray-450 dark:text-gray-500">
+                    <CreditCard size={32} className="mx-auto mb-2 opacity-30 animate-pulse" />
+                    <p className="text-sm font-semibold">No payment records found</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                     {payments.map((p: any, i: number) => (
-                      <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                      <div key={i} className="bg-gray-50 dark:bg-gray-900/40 border border-gray-250/60 dark:border-gray-800/80 rounded-xl p-4 transition-all hover:border-gray-300 dark:hover:border-gray-700/80">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-white">₹{(p.amount / 100).toLocaleString("en-IN")}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{p.method || "Online"}</p>
+                            <p className="text-sm font-bold text-gray-950 dark:text-white">₹{(p.amount / 100).toLocaleString("en-IN")}</p>
+                            <p className="text-xs text-gray-450 dark:text-gray-500 mt-1 font-semibold">{p.method || "Online"}</p>
                           </div>
                           <div className="text-right">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              p.status === "captured" ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              p.status === "captured"
+                                ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-450 border border-gray-200 dark:border-gray-700"
                             }`}>
                               {p.status || "completed"}
                             </span>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 font-bold">
                               {p.created_at ? new Date(p.created_at * 1000).toLocaleDateString() : "—"}
                             </p>
                           </div>
                         </div>
-                        {p.description && <p className="text-xs text-gray-500 mt-2">{p.description}</p>}
+                        {p.description && (
+                          <div className="mt-3 pt-2.5 border-t border-gray-200/50 dark:border-gray-800/50">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 italic font-semibold">{p.description}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -678,121 +931,135 @@ export default function AdminDashboard() {
               </>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1.5">Amount (₹)</label>
-                  <input
-                    type="number"
-                    value={paymentForm.amount_inr}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, amount_inr: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
-                    placeholder="Enter amount"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1.5">Plan</label>
+                <Input
+                  type="number"
+                  label="Amount (₹)"
+                  value={paymentForm.amount_inr}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount_inr: parseFloat(e.target.value) || 0 })}
+                  placeholder="Enter amount"
+                  min="0"
+                  required
+                />
+                
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Plan</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {PLANS.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPaymentForm({ ...paymentForm, plan: p })}
-                        className={`py-2 rounded-lg text-xs font-medium capitalize border transition-all ${
-                          paymentForm.plan === p
-                            ? "bg-purple-600 border-purple-500 text-white"
-                            : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                    {PLANS.map((p) => {
+                      const planTheme = PLAN_THEMES[p];
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setPaymentForm({ ...paymentForm, plan: p })}
+                          className={`py-2 rounded-xl text-xs font-bold capitalize border transition-all ${
+                            paymentForm.plan === p
+                              ? `${planTheme.accentBar} border-transparent text-white shadow-md shadow-brand-500/10`
+                              : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1.5">Note (optional)</label>
+
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Note (optional)</label>
                   <textarea
                     value={paymentForm.note}
                     onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                    className="w-full bg-white dark:bg-gray-800/50 border border-gray-250 dark:border-gray-800 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all shadow-sm"
                     placeholder="Payment note or reference"
                     rows={2}
                   />
                 </div>
-                <div className="flex gap-2">
-                  <button
+
+                <div className="flex gap-3 pt-2">
+                  <Button
                     onClick={() => setShowAddPayment(false)}
-                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    variant="ghost"
+                    className="flex-1 border border-gray-200 dark:border-gray-800 font-semibold"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleAddPayment}
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-purple-700 transition-all"
+                    variant="primary"
+                    className="flex-1 font-bold"
                   >
                     Add Payment
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Workspace Detail Modal */}
-      {detailModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <Building2 size={18} className="text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-lg">{detailModal.name}</p>
-                  <p className="text-xs text-gray-500">{detailModal.slug}</p>
-                </div>
+      <Modal
+        open={!!detailModal}
+        onClose={() => setDetailModal(null)}
+        title="Workspace Detail Metadata"
+        width="max-w-3xl"
+      >
+        {detailModal && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-200/50 dark:border-gray-800/50">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-brand-500/10">
+                <Building2 size={22} />
               </div>
-              <button onClick={() => setDetailModal(null)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+              <div>
+                <p className="font-extrabold text-gray-950 dark:text-white text-lg tracking-tight">{detailModal.name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold mt-0.5">{detailModal.slug}</p>
+              </div>
             </div>
 
             {detailLoading ? (
-              <div className="text-center py-10 text-gray-500">Loading...</div>
+              <div className="text-center py-10 text-gray-500 font-semibold">Loading details...</div>
             ) : (
               <div className="space-y-6">
                 {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Plan</p>
-                    <Badge label={detailModal.plan} className={PLAN_COLOR[detailModal.plan] ?? "bg-gray-100 text-gray-600"} />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-250/60 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-2">Plan</p>
+                    <Badge label={detailModal.plan} color={PLAN_COLOR_MAP[detailModal.plan] ?? "gray"} variant="soft" />
                   </div>
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Status</p>
-                    <span className={`text-sm font-medium ${detailModal.is_active ? "text-green-400" : "text-red-400"}`}>
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-250/60 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-2">Status</p>
+                    <span className={`inline-flex items-center gap-1.5 text-sm font-bold ${detailModal.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${detailModal.is_active ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                       {detailModal.is_active ? "Active" : "Suspended"}
                     </span>
                   </div>
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Created</p>
-                    <p className="text-sm text-white">{detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString() : "—"}</p>
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-250/60 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-455 dark:text-gray-500 font-bold uppercase tracking-wider mb-2.5">Created</p>
+                    <p className="text-sm text-gray-850 dark:text-white font-bold">{detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString() : "—"}</p>
                   </div>
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">WhatsApp</p>
-                    <span className={`text-sm font-medium ${detailModal.whatsapp_phone_number_id ? "text-green-400" : "text-gray-500"}`}>
-                      {detailModal.whatsapp_phone_number_id ? "Connected" : "Not Connected"}
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-250/60 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-2">WhatsApp</p>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full ${
+                      detailModal.whatsapp_phone_number_id 
+                        ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 border border-green-200 dark:border-green-500/20" 
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-850 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
+                    }`}>
+                      {detailModal.whatsapp_phone_number_id ? "Connected" : "Disconnected"}
                     </span>
                   </div>
                 </div>
 
                 {/* Owner Info */}
                 {detailModal.owner && (
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-2">Owner</p>
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-255 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-3">Owner</p>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-emerald-600 flex items-center justify-center text-white text-sm font-extrabold shadow-sm">
                         {detailModal.owner.name?.[0]?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm text-white font-medium">{detailModal.owner.name}</p>
-                        <p className="text-xs text-gray-500">{detailModal.owner.email}</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-bold">{detailModal.owner.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-455 font-bold mt-0.5">{detailModal.owner.email}</p>
                       </div>
                     </div>
                   </div>
@@ -800,23 +1067,25 @@ export default function AdminDashboard() {
 
                 {/* Subscription Info */}
                 {detailModal.subscription && (
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-3">Subscription</p>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-255 dark:border-gray-855 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-3">Subscription Details</p>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-500">Status</p>
-                        <Badge label={detailModal.subscription.status} className={STATUS_COLOR[detailModal.subscription.status] ?? "bg-gray-100 text-gray-500"} />
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">Status</p>
+                        <div className="mt-1.5">
+                          <Badge label={detailModal.subscription.status} color={STATUS_COLOR_MAP[detailModal.subscription.status] ?? "gray"} variant="soft" />
+                        </div>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Period End</p>
-                        <p className="text-sm text-white mt-1">
+                        <p className="text-xs text-gray-450 dark:text-gray-500 font-semibold">Period End</p>
+                        <p className="text-sm text-gray-800 dark:text-white font-bold mt-1.5">
                           {detailModal.subscription.period_end ? new Date(detailModal.subscription.period_end).toLocaleDateString() : "—"}
                         </p>
                       </div>
                       {detailModal.subscription.razorpay_id && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-gray-500">Razorpay ID</p>
-                          <p className="text-xs text-gray-400 font-mono mt-1">{detailModal.subscription.razorpay_id}</p>
+                        <div className="col-span-2 pt-2 border-t border-gray-200/50 dark:border-gray-800/50">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">Razorpay ID</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-305 font-mono mt-1 select-all">{detailModal.subscription.razorpay_id}</p>
                         </div>
                       )}
                     </div>
@@ -825,32 +1094,32 @@ export default function AdminDashboard() {
 
                 {/* Usage Stats */}
                 {detailModal.usage && (
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-3">Usage Statistics</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-2xl font-bold text-green-400">{detailModal.usage.messages_sent}</p>
-                        <p className="text-xs text-gray-500 mt-1">Messages Sent</p>
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-255 dark:border-gray-850 rounded-xl p-5">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-4">Usage Statistics</p>
+                    <div className="grid grid-cols-3 gap-6">
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-green-500 dark:text-green-400">{detailModal.usage.messages_sent?.toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">Sent</p>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-blue-400">{detailModal.usage.messages_received}</p>
-                        <p className="text-xs text-gray-500 mt-1">Messages Received</p>
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-blue-500 dark:text-blue-400">{detailModal.usage.messages_received?.toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">Received</p>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-violet-400">{detailModal.usage.contacts}</p>
-                        <p className="text-xs text-gray-500 mt-1">Contacts</p>
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-violet-500 dark:text-violet-400">{detailModal.usage.contacts?.toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">Contacts</p>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-amber-400">{detailModal.usage.flows}</p>
-                        <p className="text-xs text-gray-500 mt-1">Flows</p>
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-amber-500 dark:text-amber-400">{detailModal.usage.flows?.toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">Flows</p>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-pink-400">{detailModal.usage.flow_runs}</p>
-                        <p className="text-xs text-gray-500 mt-1">Flow Runs</p>
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-pink-500 dark:text-pink-400">{detailModal.usage.flow_runs?.toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">Runs</p>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-cyan-400">{detailModal.usage.this_month?.messages || 0}</p>
-                        <p className="text-xs text-gray-500 mt-1">This Month</p>
+                      <div className="hover:scale-102 transition-transform">
+                        <p className="text-2xl font-black text-cyan-500 dark:text-cyan-400">{(detailModal.usage.this_month?.messages || 0).toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider mt-1">This Month</p>
                       </div>
                     </div>
                   </div>
@@ -858,17 +1127,17 @@ export default function AdminDashboard() {
 
                 {/* WhatsApp Details */}
                 {detailModal.whatsapp_phone_number_id && (
-                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-2">WhatsApp Integration</p>
-                    <div className="space-y-2">
+                  <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-255 dark:border-gray-850 rounded-xl p-4">
+                    <p className="text-xs text-gray-450 dark:text-gray-500 font-bold uppercase tracking-wider mb-3">WhatsApp Configuration</p>
+                    <div className="space-y-3">
                       <div>
-                        <p className="text-xs text-gray-500">Phone Number ID</p>
-                        <p className="text-xs text-white font-mono">{detailModal.whatsapp_phone_number_id}</p>
+                        <p className="text-[10px] text-gray-450 dark:text-gray-500 font-semibold">Phone Number ID</p>
+                        <p className="text-xs text-gray-800 dark:text-gray-300 font-mono mt-1 select-all">{detailModal.whatsapp_phone_number_id}</p>
                       </div>
                       {detailModal.whatsapp_business_account_id && (
-                        <div>
-                          <p className="text-xs text-gray-500">Business Account ID</p>
-                          <p className="text-xs text-white font-mono">{detailModal.whatsapp_business_account_id}</p>
+                        <div className="pt-2 border-t border-gray-200/50 dark:border-gray-800/30">
+                          <p className="text-[10px] text-gray-450 dark:text-gray-500 font-semibold">Business Account ID</p>
+                          <p className="text-xs text-gray-800 dark:text-gray-300 font-mono mt-1 select-all">{detailModal.whatsapp_business_account_id}</p>
                         </div>
                       )}
                     </div>
@@ -877,8 +1146,9 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
+

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import api from "../../api/client";
 import "./login.css";
 
 // ── helpers ───────────────────────────────────────────────
@@ -279,7 +280,44 @@ export default function Login() {
       }
 
       await delay(800);
-      window.location.href = "/dashboard";
+      
+      // Link pending credentials if any
+      const provider = localStorage.getItem("pending_gateway_provider");
+      const activeWorkspace = useAuthStore.getState().workspace;
+      if (provider && activeWorkspace) {
+        try {
+          if (provider === "meta") {
+            const creds = JSON.parse(localStorage.getItem("pending_whatsapp_creds") || "{}");
+            if (creds.phone_number_id) {
+              await api.put(`/workspaces/${activeWorkspace.id}/whatsapp`, creds);
+              const updated = { ...activeWorkspace, whatsapp_provider: "meta", whatsapp_phone_number_id: creds.phone_number_id };
+              useAuthStore.getState().setWorkspace(updated);
+              localStorage.setItem("workspace", JSON.stringify(updated));
+            }
+          } else if (provider === "twilio") {
+            const creds = JSON.parse(localStorage.getItem("pending_twilio_creds") || "{}");
+            if (creds.account_sid) {
+              const updated = await api.put(`/workspaces/${activeWorkspace.id}/twilio`, creds).then(r => r.data);
+              useAuthStore.getState().setWorkspace({ ...activeWorkspace, ...updated });
+              localStorage.setItem("workspace", JSON.stringify({ ...activeWorkspace, ...updated }));
+            }
+          }
+        } catch (linkErr) {
+          console.error("Failed to auto-link gateway:", linkErr);
+        }
+        localStorage.removeItem("pending_gateway_provider");
+        localStorage.removeItem("pending_whatsapp_creds");
+        localStorage.removeItem("pending_twilio_creds");
+      }
+
+      // Check if user is superadmin and redirect accordingly
+      const user = useAuthStore.getState().user;
+      if (user?.is_superadmin) {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/dashboard";
+      }
+
 
     } catch (err: any) {
       // Deny access animation
@@ -331,6 +369,14 @@ export default function Login() {
 
   return (
     <div className={`login-root${lampLit ? " lit" : ""}`}>
+      {/* Floating Back to Home button */}
+      <Link to="/" className="back-home-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="back-icon">
+          <line x1={19} y1={12} x2={5} y2={12} /><polyline points="12 19 5 12 12 5" />
+        </svg>
+        <span>BACK TO HOME</span>
+      </Link>
+
       <canvas id="bgCanvas" ref={bgCanvasRef} />
       <div id="ambientLight" ref={ambientRef} />
       <div id="floorReflect" ref={floorRef} />
