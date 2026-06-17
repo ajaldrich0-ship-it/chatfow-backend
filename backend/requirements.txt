@@ -16,4 +16,4 @@ boto3==1.34.100
 razorpay==1.4.1
 websockets==12.0
 python-dotenv==1.0.1
-psycopg2
+psycopg2-binary
