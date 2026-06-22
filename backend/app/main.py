@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import (
@@ -7,6 +7,14 @@ from app.routers import (
 )
 
 app = FastAPI(title="FlowWA API", version="1.0.0")
+
+@app.middleware("http")
+async def override_scheme_middleware(request: Request, call_next):
+    proto = request.headers.get("x-forwarded-proto")
+    if proto:
+        request.scope["scheme"] = proto
+    response = await call_next(request)
+    return response
 
 app.add_middleware(
     CORSMiddleware,
